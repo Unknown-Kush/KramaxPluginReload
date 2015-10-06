@@ -43,6 +43,10 @@ Your sub-classes which inherit from MonoBehavior need to inherit from this mods 
 instead. ReloadableMonoBehaviour is a direct sub-class of MonoBehavior that adds a "type mapping" property
 that is used to ensure the correct class types are used for the DLL that is reloaded.
 
+In order to be able to use it, make sure to add this line:
+
+    using KramaxReloadExtensions;
+
 Next, you need to change any calls to GameObject.AddComponent<type> to use the method provided by
 ReloadableMonoBehaviour ReloadableMonoBehaviour.AddComponent(type). 
 
