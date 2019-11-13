@@ -131,4 +131,31 @@ namespace KramaxPluginReload.Classess
             startupType = KSPAddon.Startup.TrackingStation;
         }
     }
+
+    [KSPAddon(KSPAddon.Startup.FlightAndEditor, false)]
+    public class FlightAndEditor : PluginMethod
+    {
+        public FlightAndEditor()
+        {
+            startupType = KSPAddon.Startup.FlightAndEditor;
+        }
+    }
+
+    [KSPAddon(KSPAddon.Startup.FlightAndKSC, false)]
+    public class FlightAndKSC : PluginMethod
+    {
+        public FlightAndKSC()
+        {
+            startupType = KSPAddon.Startup.FlightAndKSC;
+        }
+    }
+
+    [KSPAddon(KSPAddon.Startup.FlightEditorAndKSC, false)]
+    public class FlightEditorAndKSC : PluginMethod
+    {
+        public FlightEditorAndKSC()
+        {
+            startupType = KSPAddon.Startup.FlightEditorAndKSC;
+        }
+    }
 }
