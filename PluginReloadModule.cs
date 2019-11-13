@@ -15,6 +15,7 @@ using KramaxPluginReload.UI;
 using UnityEngine;
 using System.Reflection.Emit;
 using System.Threading;
+using System.Security.Cryptography;
 
 
 [KSPAddon(KSPAddon.Startup.Instantly, true)]
@@ -102,8 +103,9 @@ namespace KramaxPluginReload
             try
             {
                 byte[] assemblyBytes = System.IO.File.ReadAllBytes(location);
+                string md5Hash = GetMd5Hash(assemblyBytes);
                 Assembly a = Assembly.Load(assemblyBytes);
-                Deb.Log("KramaxPluginReload: Reloaded assembly: {0} version: {1}.", a.GetName().Name, a.GetName().Version);
+                Deb.Log("KramaxPluginReload: Reloaded assembly: {0} version: {1} md5: {2}.", a.GetName().Name, a.GetName().Version, md5Hash);
                 return a;
             }
             catch (Exception ex)
@@ -112,6 +114,19 @@ namespace KramaxPluginReload
             }
             return null;
         }
+
+        static string GetMd5Hash(byte[] input)
+        {
+            byte[] data = MD5.Create().ComputeHash(input);
+            StringBuilder sBuilder = new StringBuilder();
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                sBuilder.Append(data[i].ToString("x2"));
+            }
+
+            return sBuilder.ToString();
+        }        
 
         static Type CreateUniqueSubClass(ModuleBuilder moduleBldr, Type originalType, int versionUid)
         {
