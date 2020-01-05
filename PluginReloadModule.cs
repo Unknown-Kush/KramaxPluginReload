@@ -131,7 +131,7 @@ namespace KramaxPluginReload
                 }
                 List<string> filesToRemoveAtEnd = new List<string>();
                 String locationToRead = location;
-                if (windowsSdkBinPath != null && dotFrameworkBinPath != null)
+                if (windowsSdkBinPath != null && windowsSdkBinPath.Length > 0 && dotFrameworkBinPath != null && dotFrameworkBinPath.Length > 0)
                 {
                     Deb.Log("Paths to ildasm and ilasm are provided. Will change the assembly name");
                     String oldName = Path.GetFileNameWithoutExtension(location);
