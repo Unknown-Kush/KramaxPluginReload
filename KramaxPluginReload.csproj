@@ -9,8 +9,13 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>KramaxPluginReload</RootNamespace>
     <AssemblyName>KramaxPluginReload</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+    <KspPath Condition=" '$(KspPath)' == '' ">C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program-mod-dev</KspPath>
+    <KspDllPath Condition=" '$(KspDllPath)' == '' ">$(KspPath)\KSP_x64_Data\Managed</KspDllPath>
+    <KspPluginPath Condition=" '$(KspPluginPath)' == '' ">$(KspPath)\GameData</KspPluginPath>
+    <AssemblySearchPaths> $(KspPluginPath)/KramaxPluginReload ; $(KspDllPath) ; $(AssemblySearchPaths) </AssemblySearchPaths>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -31,16 +36,19 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>C:\KSPT\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="UnityEngine">
-      <HintPath>C:\KSPT\KSP_Data\Managed\UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
     </Reference>
   </ItemGroup>
   <ItemGroup>
