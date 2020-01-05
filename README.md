@@ -1,5 +1,5 @@
 
-KeyNal Plugin Reload Reloaded
+Ker_nale Plugin Reload Reloaded
 ====================
 This is plugin for Kerbal Space program forked from original "Kramax Plugin Reload". This plugin is only for developers
 of mods and has no use for ordinary players. It allows to easily reload modification while game is running
@@ -25,8 +25,10 @@ I do not know why this was working correctly in previous versions of KSP. Either
 itself only on Windows (previously I was developing on OsX) or there was some change in Mono in Unity3d.
 
 The workarounbd requires to provide following properties in Settings.cfg:
+```
 windowsSdkBinPath=C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools\
 dotFrameworkBinPath=C:\Windows\Microsoft.NET\Framework\v4.0.30319\
+```
 
 The paths may differ from system to system so please adjust them for your needs. If they are provided empty then
 workaround is not used.
