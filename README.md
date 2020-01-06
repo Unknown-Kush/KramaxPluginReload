@@ -15,7 +15,7 @@ The bug is corrected in mono-6.6.0.161 and mono-5.16.0.179
 but mono used in KSP 1.8.1 is reported as "5.11.0 (Visual Studio built mono)". 
 To hack around this I do the following:
 - Decompile .dll using ildasm
-- Change assembly name inside decomiled file (fragment ".assembly <assembly-name>")
+- Change assembly name inside decomiled file (fragment ".assembly assembly-name")
 - Compile file again to .dll using ilasm
 - Load changed .dll
 
