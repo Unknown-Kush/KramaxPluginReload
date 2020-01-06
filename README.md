@@ -18,8 +18,6 @@ To hack around this I do the following:
 - Change assembly name inside decomiled file (fragment ".assembly <assembly-name>")
 - Compile file again to .dll using ilasm
 - Load changed .dll
-example location of ildasm is C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools\
-example location of ilasm is C:\Windows\Microsoft.NET\Framework\v4.0.30319\.
 
 I do not know why this was working correctly in previous versions of KSP. Either the bug manifests
 itself only on Windows (previously I was developing on OsX) or there was some change in Mono in Unity3d.
