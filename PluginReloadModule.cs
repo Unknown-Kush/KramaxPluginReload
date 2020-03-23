@@ -15,7 +15,8 @@ using KramaxPluginReload.UI;
 using UnityEngine;
 using System.Reflection.Emit;
 using System.Threading;
-
+using System.Diagnostics;
+using System.IO;
 
 [KSPAddon(KSPAddon.Startup.Instantly, true)]
 public class KramaxPluginReloadModule : MonoBehaviour
@@ -33,16 +34,16 @@ namespace KramaxPluginReload
     {
         public static void Log(String format, params System.Object[] args)
         {
-            Debug.Log(String.Format(format, args));
+            UnityEngine.Debug.Log(String.Format(format, args));
         }
 
         public static void Log(String message)
         {
-            Debug.Log(message);
+            UnityEngine.Debug.Log(message);
         }
     }
 
-   
+
     /*
     public class Reloadable : Attribute
     {
@@ -56,6 +57,8 @@ namespace KramaxPluginReload
         static public int versionCount = 0;
         public static List<PluginClass> PluginClasses = new List<PluginClass>();
         public static List<PluginSetting> PluginSettings = new List<PluginSetting>();
+        public static String windowsSdkBinPath = null;
+        public static String dotFrameworkBinPath = null;
         public static PluginReloadWindow PluginReloadWindow = new PluginReloadWindow()
         {
             ReloadCallback = LoadPlugins
@@ -63,7 +66,7 @@ namespace KramaxPluginReload
 
         public PluginReloadModule()
         {
-            Deb.Log("KramaxPluginReload loaded, Version: {0}.", 
+            Deb.Log("KramaxPluginReload loaded, Version: {0}.",
                 Assembly.GetExecutingAssembly().GetName().Version);
 
             LoadConfig();
@@ -77,6 +80,8 @@ namespace KramaxPluginReload
             {
                 ConfigNode settings = ConfigNode.Load(KSPUtil.ApplicationRootPath + "GameData/KramaxPluginReload/Settings.cfg");
 
+                windowsSdkBinPath = settings.GetValue("windowsSdkBinPath");
+                dotFrameworkBinPath = settings.GetValue("dotFrameworkBinPath");
                 foreach (ConfigNode node in settings.GetNodes("PluginSetting"))
                 {
                     PluginSetting pluginSetting = new PluginSetting()
@@ -101,9 +106,69 @@ namespace KramaxPluginReload
         {
             try
             {
-                byte[] assemblyBytes = System.IO.File.ReadAllBytes(location);
+                //Therere is a bug in Mono that prevents loading assembly with the same name more than once
+                //(if such assembly is loaded then old version is returned). The bug report can be 
+                //found here: https://xamarin.github.io/bugzilla-archives/11/11199/bug.html.
+                //The bug is corrected in mono-6.6.0.161 and mono-5.16.0.179 
+                //(commit https://github.com/mono/mono/commit/40c13f7b0ff71bfff8e58f8bd66bca0734d7d284 ) 
+                //but mono used in KSP 1.8.1 is reported as "5.11.0 (Visual Studio built mono)". 
+                //To hack around this we do the following:
+                // - Decompile .dll using ildasm
+                // - Change assembly name inside decomiled file (fragment ".assembly <assembly-name>")
+                // - Compile file again to .dll using ilasm
+                // - Load changed .dll
+                //example location of ildasm is C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools\
+                //example location of ilasm is C:\Windows\Microsoft.NET\Framework\v4.0.30319\.
+                //
+                //I do not know why this was working correctly in previous versions of KSP. Either the bug manifests
+                //itself only on Windows (previously I was developing on OsX) or there was some change in Mono in Unity3d.
+                //
+                //
+                if (!System.IO.File.Exists(location))
+                {
+                    Deb.Log("File does not exist: {0}", location);
+                    return null;
+                }
+                List<string> filesToRemoveAtEnd = new List<string>();
+                String locationToRead = location;
+                if (windowsSdkBinPath != null && windowsSdkBinPath.Length > 0 && dotFrameworkBinPath != null && dotFrameworkBinPath.Length > 0)
+                {
+                    Deb.Log("Paths to ildasm and ilasm are provided. Will change the assembly name");
+                    String oldName = Path.GetFileNameWithoutExtension(location);
+                    String newName = oldName + "v" + versionCount;
+                    String directoryForIntermediateOutput = Path.GetDirectoryName(location);
+                    String decompiledPath = Path.Combine(directoryForIntermediateOutput, newName + ".decompiled");
+                    filesToRemoveAtEnd.Add(decompiledPath);
+                    filesToRemoveAtEnd.Add(Path.Combine(directoryForIntermediateOutput, newName + ".res"));
+
+                    Deb.Log("Running ildasm");
+                    RunProcess(windowsSdkBinPath, "ildasm", location, "/output=" + decompiledPath, "/nobar");
+
+                    Deb.Log("Substituting assembly name");
+                    string[] lines = System.IO.File.ReadAllLines(decompiledPath);
+                    for (int i = 0; i < lines.Length; ++i)
+                    {
+                        String line = lines[i];
+                        if (line.Contains(".assembly " + oldName))
+                        {
+                            line = line.Replace(".assembly " + oldName, ".assembly " + newName);
+                        }
+                        lines[i] = line;
+                    }
+                    System.IO.File.WriteAllLines(decompiledPath, lines);
+
+                    Deb.Log("Running ildasm");
+                    RunProcess(dotFrameworkBinPath, "ilasm", decompiledPath, "/dll");
+                    locationToRead = Path.Combine(directoryForIntermediateOutput, newName + ".dll");
+                    filesToRemoveAtEnd.Add(locationToRead);
+                }
+                byte[] assemblyBytes = System.IO.File.ReadAllBytes(locationToRead);
                 Assembly a = Assembly.Load(assemblyBytes);
-                Deb.Log("KramaxPluginReload: Reloaded assembly: {0} version: {1}.", a.GetName().Name, a.GetName().Version);
+                Deb.Log("Reloaded assembly: {0} version: {1}.", a.GetName().Name, a.GetName().Version);
+                foreach (String fileToRemove in filesToRemoveAtEnd)
+                {
+                    System.IO.File.Delete(fileToRemove);
+                }
                 return a;
             }
             catch (Exception ex)
@@ -111,6 +176,24 @@ namespace KramaxPluginReload
                 Deb.Log("KramaxPluginReload: Failed to load plugin from file {0}. Error:\n\n{1}", location, ex);
             }
             return null;
+        }
+        static void RunProcess(String execPath, String execName, params String[] arguments)
+        {
+            ProcessStartInfo startInfo = new ProcessStartInfo();
+            Process p = new Process();
+
+            startInfo.CreateNoWindow = true;
+            startInfo.RedirectStandardOutput = true;
+            startInfo.RedirectStandardInput = true;
+
+            startInfo.UseShellExecute = false;
+            startInfo.Arguments = string.Join(" ", arguments.Select(e => "\"" + e + "\"")); ;
+            startInfo.FileName = Path.Combine(execPath, execName);
+
+            p.StartInfo = startInfo;
+            p.Start();
+            p.StandardOutput.ReadToEnd();
+            p.WaitForExit();
         }
 
         static Type CreateUniqueSubClass(ModuleBuilder moduleBldr, Type originalType, int versionUid)
@@ -298,7 +381,7 @@ namespace KramaxPluginReload
                     PluginReloadWindow.OpenWindow();
                 else
                     PluginReloadWindow.CloseWindow();
-                
+
             }
         }
     }

@@ -1,5 +1,8 @@
 *.obj
 *.suo
+bin
+obj
+.vs
 
 # Windows image file caches
 Thumbs.db

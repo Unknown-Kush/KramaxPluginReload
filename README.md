@@ -1,4 +1,37 @@
-Kramax Plugin Reload
+
+Ker_nale Plugin Reload Reloaded
+====================
+This is plugin for Kerbal Space program forked from original "Kramax Plugin Reload". This plugin is only for developers
+of mods and has no use for ordinary players. It allows to easily reload modification while game is running
+without necessity to restart entire game.
+
+Changes from original Kramax Plugin Reload
+====================
+Fixed reloading issues on KSP 1.8.1. Therere is a bug in Mono that prevents loading assembly with the same name more than once
+(if such assembly is loaded then old version is returned). The bug report can be 
+found here: https://xamarin.github.io/bugzilla-archives/11/11199/bug.html.
+The bug is corrected in mono-6.6.0.161 and mono-5.16.0.179 
+(commit https://github.com/mono/mono/commit/40c13f7b0ff71bfff8e58f8bd66bca0734d7d284 ) 
+but mono used in KSP 1.8.1 is reported as "5.11.0 (Visual Studio built mono)". 
+To hack around this I do the following:
+- Decompile .dll using ildasm
+- Change assembly name inside decomiled file (fragment ".assembly assembly-name")
+- Compile file again to .dll using ilasm
+- Load changed .dll
+
+I do not know why this was working correctly in previous versions of KSP. Either the bug manifests
+itself only on Windows (previously I was developing on OsX) or there was some change in Mono in Unity3d.
+
+The workarounbd requires to provide following properties in Settings.cfg:
+```
+windowsSdkBinPath=C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools\
+dotFrameworkBinPath=C:\Windows\Microsoft.NET\Framework\v4.0.30319\
+```
+
+The paths may differ from system to system so please adjust them for your needs. If they are provided empty then
+workaround is not used.
+
+Original description of Kramax Plugin Reload
 ====================
 I started developing an autopilot mode (Kramax Autopilot) and I normally develop software using a very quick
 modify/test cycle. I quickly realized that waiting for KSP to restart every time I wanted to try out a change
