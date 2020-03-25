@@ -78,7 +78,7 @@ namespace KramaxPluginReload
         {
             try
             {
-                ConfigNode settings = ConfigNode.Load(KSPUtil.ApplicationRootPath + "GameData/KramaxPluginReload/Settings.cfg");
+                ConfigNode settings = ConfigNode.Load(KSPUtil.ApplicationRootPath + "GameData/_0000_KramaxPluginReload/Settings.cfg");
 
                 windowsSdkBinPath = settings.GetValue("windowsSdkBinPath");
                 dotFrameworkBinPath = settings.GetValue("dotFrameworkBinPath");
@@ -141,7 +141,7 @@ namespace KramaxPluginReload
                     filesToRemoveAtEnd.Add(decompiledPath);
                     filesToRemoveAtEnd.Add(Path.Combine(directoryForIntermediateOutput, newName + ".res"));
 
-                    Deb.Log("Running ildasm");
+                    Deb.Log("Running ildasm, decompiled file: " + decompiledPath);
                     RunProcess(windowsSdkBinPath, "ildasm", location, "/output=" + decompiledPath, "/nobar");
 
                     Deb.Log("Substituting assembly name");
@@ -153,11 +153,24 @@ namespace KramaxPluginReload
                         {
                             line = line.Replace(".assembly " + oldName, ".assembly " + newName);
                         }
+                        // following line to work around a bug in ilasm
+                        // details here: https://developercommunity.visualstudio.com/content/problem/742329/doublenan-field-ilasm-compilation-error.html
+                        if (line.Contains("-nan(ind)"))
+                        line = line.Replace("-nan(ind)", "0xfff8000000000000");
+
+                        // Following line to work around a bug in ilasm,
+                        // details here: https://developercommunity.visualstudio.com/content/problem/545431/ildasmexe-regression-with-infinum-floating-point-v.html
+                        if (line.Contains("ldc.r8     inf"))
+                            line = line.Replace("ldc.r8     inf", "ldc.r8(00 00 00 00 00 00 F0 7F)");
+
                         lines[i] = line;
                     }
+                    Deb.Log("Writing decompiled file: " + decompiledPath);
                     System.IO.File.WriteAllLines(decompiledPath, lines);
 
-                    Deb.Log("Running ildasm");
+ 
+                    Deb.Log("Running ilasm");
+                    Deb.Log("dotFrameworkBinPath: " + dotFrameworkBinPath);
                     RunProcess(dotFrameworkBinPath, "ilasm", decompiledPath, "/dll");
                     locationToRead = Path.Combine(directoryForIntermediateOutput, newName + ".dll");
                     filesToRemoveAtEnd.Add(locationToRead);
@@ -179,6 +192,7 @@ namespace KramaxPluginReload
         }
         static void RunProcess(String execPath, String execName, params String[] arguments)
         {
+            Deb.Log("RunProcess, execPath: " + execPath + ", execName: " + execName);
             ProcessStartInfo startInfo = new ProcessStartInfo();
             Process p = new Process();
 
@@ -189,7 +203,8 @@ namespace KramaxPluginReload
             startInfo.UseShellExecute = false;
             startInfo.Arguments = string.Join(" ", arguments.Select(e => "\"" + e + "\"")); ;
             startInfo.FileName = Path.Combine(execPath, execName);
-
+            Deb.Log("RunProcess, filename: " + startInfo.FileName + ", arguments: " + startInfo.Arguments);
+             
             p.StartInfo = startInfo;
             p.Start();
             p.StandardOutput.ReadToEnd();
@@ -232,6 +247,7 @@ namespace KramaxPluginReload
                 {
                     if (pluginClass.alive)
                     {
+                        Deb.Log("Plugin: " + pluginClass.Name + "deleting instance");
                         pluginClass.DeleteInstance();
                     }
                     toRemove.Add(pluginClass);
@@ -240,6 +256,8 @@ namespace KramaxPluginReload
                 //Remove old class references
                 foreach (PluginClass r in toRemove)
                 {
+                    Deb.Log("Plugin: " + r.Name + " removing old class references");
+
                     PluginClasses.Remove(r);
                 }
 

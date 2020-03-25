@@ -31,6 +31,17 @@ dotFrameworkBinPath=C:\Windows\Microsoft.NET\Framework\v4.0.30319\
 The paths may differ from system to system so please adjust them for your needs. If they are provided empty then
 workaround is not used.
 
+More changes from the original by Linuxgurugamer
+================================================
+There are some bugs in the ilasm compiler which can prevent it from successfully recompiling a
+decompiled module.  Details are in the following two posts:
+https://developercommunity.visualstudio.com/content/problem/742329/doublenan-field-ilasm-compilation-error.html
+https://developercommunity.visualstudio.com/content/problem/545431/ildasmexe-regression-with-infinum-floating-point-v.html
+
+I've also added a few more logging statements.
+Finally, I reorganized the directories and layouts to my standard layout and added a deploy.bat which copies the compiled dll to the dev install of KSP
+
+
 Original description of Kramax Plugin Reload
 ====================
 I started developing an autopilot mode (Kramax Autopilot) and I normally develop software using a very quick
@@ -107,6 +118,13 @@ This needed to be changed to this:
 	}
 
 If you use any other varient of AddComponent they also need to be changed.
+
+You will also need to add the following to the end of your AssemblyInfo.cs file to make sure that you don't run into a situation where your mod's dll is loaded before this dll is.:
+
+    #if DEBUG
+    [assembly: KSPAssemblyDependency("KramaxReloadExtensions", 0, 0, 1)]
+    #endif
+
 
 Installation
 ------------
