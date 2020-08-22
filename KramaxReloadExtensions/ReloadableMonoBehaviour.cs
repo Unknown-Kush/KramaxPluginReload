@@ -22,12 +22,12 @@ namespace KramaxReloadExtensions
                 }
                 catch (KeyNotFoundException)
                 {
-                    Debug.Log(String.Format("ReloadableMonoBehavior.AddComponent: ERROR--no type mapping for {0}", type.Name));
+                    Debug.LogError(String.Format("ReloadableMonoBehavior.AddComponent: ERROR--no type mapping for {0}", type.Name));
                 }
             }
             else
             {
-                Debug.Log(String.Format("ReloadableMonoBehavior.AddComponent: ERROR--no type mapping present in parent {0}", this));
+                Debug.LogError(String.Format("ReloadableMonoBehavior.AddComponent: ERROR--no type mapping present in parent {0}", this));
             }
 
             var result = aGameObject.AddComponent(newType) as MonoBehaviour;
@@ -37,7 +37,9 @@ namespace KramaxReloadExtensions
 
             if (reloadable != null)
             {
+#if DEBUG
                 Debug.Log(String.Format("ReloadableMonoBehavior.AddComponent: propigate type mapping for {0}", type.Name));
+#endif
                 reloadable.typeMapping = typeMapping;
             }
 

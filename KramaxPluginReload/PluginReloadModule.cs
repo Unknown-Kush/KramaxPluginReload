@@ -25,7 +25,6 @@ public class KramaxPluginReloadModule : MonoBehaviour
     {
         KramaxPluginReload.Classe.Immortal.AddImmortal<KramaxPluginReload.PluginReloadModule>();
     }
-
 }
 
 namespace KramaxPluginReload
@@ -40,6 +39,16 @@ namespace KramaxPluginReload
         public static void Log(String message)
         {
             UnityEngine.Debug.Log(message);
+        }
+        
+        public static void LogError(String format, params System.Object[] args)
+        {
+            UnityEngine.Debug.LogError(String.Format(format, args));
+        }
+        
+        public static void LogError(String message)
+        {
+            UnityEngine.Debug.LogError(message);
         }
     }
 
@@ -59,6 +68,7 @@ namespace KramaxPluginReload
         public static List<PluginSetting> PluginSettings = new List<PluginSetting>();
         public static String windowsSdkBinPath = null;
         public static String dotFrameworkBinPath = null;
+
         public static PluginReloadWindow PluginReloadWindow = new PluginReloadWindow()
         {
             ReloadCallback = LoadPlugins
@@ -66,8 +76,7 @@ namespace KramaxPluginReload
 
         public PluginReloadModule()
         {
-            Deb.Log("KramaxPluginReload loaded, Version: {0}.",
-                Assembly.GetExecutingAssembly().GetName().Version);
+            Deb.Log("KramaxPluginReload loaded, Version: {0}.", Assembly.GetExecutingAssembly().GetName().Version);
 
             LoadConfig();
             LoadPlugins();
@@ -97,7 +106,7 @@ namespace KramaxPluginReload
             }
             catch (Exception ex)
             {
-                Deb.Log("KramaxPluginReload: Failed to load settings.cfg. Error:\n{0}", ex);
+                Deb.LogError("KramaxPluginReload: Failed to load settings.cfg. Error:\n{0}", ex);
                 return;
             }
         }
@@ -126,25 +135,30 @@ namespace KramaxPluginReload
                 //
                 if (!System.IO.File.Exists(location))
                 {
-                    Deb.Log("File does not exist: {0}", location);
+                    Deb.LogError("File does not exist: {0}", location);
                     return null;
                 }
+
                 List<string> filesToRemoveAtEnd = new List<string>();
                 String locationToRead = location;
                 if (windowsSdkBinPath != null && windowsSdkBinPath.Length > 0 && dotFrameworkBinPath != null && dotFrameworkBinPath.Length > 0)
                 {
+#if DEBUG
                     Deb.Log("Paths to ildasm and ilasm are provided. Will change the assembly name");
+#endif
                     String oldName = Path.GetFileNameWithoutExtension(location);
                     String newName = oldName + "v" + versionCount;
                     String directoryForIntermediateOutput = Path.GetDirectoryName(location);
                     String decompiledPath = Path.Combine(directoryForIntermediateOutput, newName + ".decompiled");
                     filesToRemoveAtEnd.Add(decompiledPath);
                     filesToRemoveAtEnd.Add(Path.Combine(directoryForIntermediateOutput, newName + ".res"));
-
+#if DEBUG
                     Deb.Log("Running ildasm, decompiled file: " + decompiledPath);
+#endif
                     RunProcess(windowsSdkBinPath, "ildasm", location, "/output=" + decompiledPath, "/nobar");
-
+#if DEBUG
                     Deb.Log("Substituting assembly name");
+#endif
                     string[] lines = System.IO.File.ReadAllLines(decompiledPath);
                     for (int i = 0; i < lines.Length; ++i)
                     {
@@ -153,10 +167,11 @@ namespace KramaxPluginReload
                         {
                             line = line.Replace(".assembly " + oldName, ".assembly " + newName);
                         }
+
                         // following line to work around a bug in ilasm
                         // details here: https://developercommunity.visualstudio.com/content/problem/742329/doublenan-field-ilasm-compilation-error.html
                         if (line.Contains("-nan(ind)"))
-                        line = line.Replace("-nan(ind)", "0xfff8000000000000");
+                            line = line.Replace("-nan(ind)", "0xfff8000000000000");
 
                         // Following line to work around a bug in ilasm,
                         // details here: https://developercommunity.visualstudio.com/content/problem/545431/ildasmexe-regression-with-infinum-floating-point-v.html
@@ -165,34 +180,45 @@ namespace KramaxPluginReload
 
                         lines[i] = line;
                     }
+#if DEBUG
                     Deb.Log("Writing decompiled file: " + decompiledPath);
+#endif
                     System.IO.File.WriteAllLines(decompiledPath, lines);
 
- 
+#if DEBUG
                     Deb.Log("Running ilasm");
                     Deb.Log("dotFrameworkBinPath: " + dotFrameworkBinPath);
+#endif
                     RunProcess(dotFrameworkBinPath, "ilasm", decompiledPath, "/dll");
                     locationToRead = Path.Combine(directoryForIntermediateOutput, newName + ".dll");
                     filesToRemoveAtEnd.Add(locationToRead);
                 }
+
                 byte[] assemblyBytes = System.IO.File.ReadAllBytes(locationToRead);
                 Assembly a = Assembly.Load(assemblyBytes);
+
                 Deb.Log("Reloaded assembly: {0} version: {1}.", a.GetName().Name, a.GetName().Version);
+
                 foreach (String fileToRemove in filesToRemoveAtEnd)
                 {
                     System.IO.File.Delete(fileToRemove);
                 }
+
                 return a;
             }
             catch (Exception ex)
             {
-                Deb.Log("KramaxPluginReload: Failed to load plugin from file {0}. Error:\n\n{1}", location, ex);
+                Deb.LogError("KramaxPluginReload: Failed to load plugin from file {0}. Error:\n\n{1}", location, ex);
             }
+
             return null;
         }
+
         static void RunProcess(String execPath, String execName, params String[] arguments)
         {
+#if DEBUG
             Deb.Log("RunProcess, execPath: " + execPath + ", execName: " + execName);
+#endif
             ProcessStartInfo startInfo = new ProcessStartInfo();
             Process p = new Process();
 
@@ -201,10 +227,12 @@ namespace KramaxPluginReload
             startInfo.RedirectStandardInput = true;
 
             startInfo.UseShellExecute = false;
-            startInfo.Arguments = string.Join(" ", arguments.Select(e => "\"" + e + "\"")); ;
+            startInfo.Arguments = string.Join(" ", arguments.Select(e => "\"" + e + "\""));
+            ;
             startInfo.FileName = Path.Combine(execPath, execName);
+#if DEBUG
             Deb.Log("RunProcess, filename: " + startInfo.FileName + ", arguments: " + startInfo.Arguments);
-             
+#endif
             p.StartInfo = startInfo;
             p.Start();
             p.StandardOutput.ReadToEnd();
@@ -213,11 +241,10 @@ namespace KramaxPluginReload
 
         static Type CreateUniqueSubClass(ModuleBuilder moduleBldr, Type originalType, int versionUid)
         {
-
             String newClassName = String.Format("{0}_{1}_", originalType.Name, versionUid);
-
+#if DEBUG
             Deb.Log("CreateUniqueSubClass: new class name is {0}", newClassName);
-
+#endif
 
             TypeBuilder typeBldr =
                 moduleBldr.DefineType(newClassName, TypeAttributes.Public | TypeAttributes.Class, originalType);
@@ -247,17 +274,21 @@ namespace KramaxPluginReload
                 {
                     if (pluginClass.alive)
                     {
+#if DEBUG
                         Deb.Log("Plugin: " + pluginClass.Name + "deleting instance");
+#endif
                         pluginClass.DeleteInstance();
                     }
+
                     toRemove.Add(pluginClass);
                 }
 
                 //Remove old class references
                 foreach (PluginClass r in toRemove)
                 {
+#if DEBUG
                     Deb.Log("Plugin: " + r.Name + " removing old class references");
-
+#endif
                     PluginClasses.Remove(r);
                 }
 
@@ -270,6 +301,7 @@ namespace KramaxPluginReload
                     {
                         PluginClasses.Remove(pluginClass);
                     }
+
                     continue;
                 }
 
@@ -278,25 +310,26 @@ namespace KramaxPluginReload
 
                 AssemblyBuilder assemblyBldr =
                     Thread.GetDomain().DefineDynamicAssembly(new AssemblyName(tmpAssemblyName),
-                                                             AssemblyBuilderAccess.Run);
+                        AssemblyBuilderAccess.Run);
 
                 ModuleBuilder moduleBldr = assemblyBldr.DefineDynamicModule(tmpModuleName);
 
                 IList<Type> derivedClassess =
-                  (from t in assembly.GetTypes()
-                   where t.IsSubclassOf(typeof(MonoBehaviour))
-                   select t).ToList();
+                    (from t in assembly.GetTypes()
+                        where t.IsSubclassOf(typeof(MonoBehaviour))
+                        select t).ToList();
 
                 List<PluginClass> plugins = new List<PluginClass>();
                 Dictionary<Type, Type> typeMapping = new Dictionary<Type, Type>();
 
                 foreach (var derivedClass in derivedClassess)
                 {
+#if DEBUG
                     Deb.Log("KramaxPluginReload.LoadPlugins: got type {0}.", derivedClass.Name);
                     Deb.Log("KramaxPluginReload.LoadPlugins: from assembly {0}, v{1}.",
                         derivedClass.Assembly.GetName().Name,
                         derivedClass.Assembly.GetName().Version);
-
+#endif
                     System.Attribute[] attrs = System.Attribute.GetCustomAttributes(derivedClass);
 
                     KSPAddon kspAddon = null;
@@ -311,15 +344,16 @@ namespace KramaxPluginReload
 
                     if (!derivedClass.IsSubclassOf(typeof(KramaxReloadExtensions.ReloadableMonoBehaviour)))
                     {
-                        Deb.Log("KramaxPluginReload.LoadPlugins: ERROR type {0} is not ReloadableMonoBehaviour subclass.",
+                        Deb.LogError("KramaxPluginReload.LoadPlugins: ERROR type {0} is not ReloadableMonoBehaviour subclass.",
                             derivedClass.Name);
                         continue;
                     }
 
                     if (kspAddon != null)
                     {
+#if DEBUG
                         Deb.Log("KramaxPluginReload.LoadPlugins: type {0} will be top-level component.", derivedClass.Name);
-
+#endif
                         PluginClass pluginClass = new PluginClass();
 
                         pluginClass.pluginSetting = setting;
@@ -331,8 +365,9 @@ namespace KramaxPluginReload
                     }
                     else
                     {
+#if DEBUG
                         Deb.Log("KramaxPluginReload.LoadPlugins: type {0} will be sub-level component.", derivedClass.Name);
-
+#endif
                         var newType = CreateUniqueSubClass(moduleBldr, derivedClass, versionCount);
                         typeMapping[derivedClass] = newType;
                     }
@@ -383,11 +418,14 @@ namespace KramaxPluginReload
 
                     if (awake)
                     {
+#if DEBUG
                         Deb.Log("KramaxPluginReload.LoadPlugins: plugin should be awake: {0}.", pluginClass.Name);
+#endif
                         pluginClass.CreateInstance();
                     }
                 }
             }
+
             Deb.Log("KramaxPluginReload.LoadPlugins: Plugins (re)loaded.");
         }
 
@@ -399,7 +437,6 @@ namespace KramaxPluginReload
                     PluginReloadWindow.OpenWindow();
                 else
                     PluginReloadWindow.CloseWindow();
-
             }
         }
     }

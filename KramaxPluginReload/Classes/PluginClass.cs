@@ -30,12 +30,14 @@ namespace KramaxPluginReload.Classess
         {
             if (go != null || instance != null)
             {
+#if DEBUG
                 Debug.LogError(String.Format("KramaxPluginReload.PluginClass.CreateInstance object {0} already alive.", Name));
+#endif
                 return;
             }
-
+#if DEBUG
             Debug.Log(String.Format("KramaxPluginReload.PluginClass.CreateInstance create object {0}.", Name));
-
+#endif
             go = new GameObject(type.Name);
             instance = go.AddComponent(type) as KramaxReloadExtensions.ReloadableMonoBehaviour;
             instance.typeMapping = typeMapping;
@@ -48,8 +50,9 @@ namespace KramaxPluginReload.Classess
         {
             if (go != null)
             {
+#if DEBUG
                 Debug.Log(String.Format("KramaxPluginReload.PluginClass.DeleteInstance {0} being destroyed.", Name));
-            
+#endif
                 UnityEngine.GameObject.DestroyImmediate(go);
                 go = null;
                 instance = null;
@@ -58,7 +61,9 @@ namespace KramaxPluginReload.Classess
             }
             else
             {
+#if DEBUG
                 Debug.Log(String.Format("KramaxPluginReload.PluginClass.DeleteInstance object {0} is not alive.", Name));
+#endif
             }
         }
     }
