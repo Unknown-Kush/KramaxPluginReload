@@ -73,7 +73,7 @@
 
 	)
 
-	start /D $(SolutionDir) /WAIT deploy.bat  $(TargetDir) $(TargetFileName)
+	start /D "$(SolutionDir)" /WAIT deploy.bat  "$(TargetDir)" "$(TargetFileName)"
 </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
